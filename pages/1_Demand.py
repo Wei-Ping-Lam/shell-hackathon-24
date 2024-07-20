@@ -5,9 +5,15 @@ st.set_page_config(layout="centered")
 
 if 'demand' not in st.session_state:
   st.header("Input your demand")
-  st.markdown("For each year, there should be 16 inputs. Each 4 vehicle sizes should be included in each 4 distance buckets.")
+  st.markdown("For each year (2023-2038), there should be 16 inputs. Each 4 vehicle sizes should be included in each 4 distance buckets.")
   demanded = st.file_uploader("Choose a CSV file", type = '.csv')
   st.download_button("Download Demand Template", pd.read_csv('./dataset/demand_template.csv').to_csv(index=False), 'demand_template.csv')
+  if st.button("Use default demand data"):
+    demand_df = pd.read_csv('./dataset/demand.csv')
+    st.session_state['original_demand'] = demand_df
+    st.session_state['demand'] = demand_df
+    st.rerun()
+
   if demanded is not None:
     demand_df = pd.read_csv(demanded)
     st.session_state['original_demand'] = demand_df
@@ -16,7 +22,7 @@ if 'demand' not in st.session_state:
 
 if 'demand' in st.session_state:
   st.header("Here is your demand")
-  st.subheader('You may change the demand here')
+  st.subheader('You may change the demand here by double clicking in the table')
   dem_df = st.data_editor(
     st.session_state['demand'], 
     column_config = {"demand": st.column_config.NumberColumn("Demand (km)", min_value = 0, step = 1, format = "%d")},
@@ -38,6 +44,3 @@ if 'demand' in st.session_state:
   
   if st.button('Go to Fleet Optimizer'):
     st.switch_page("pages/2_Fleet Optimizer.py")
-  
-  st.session_state['range_start'] = min(st.session_state['demand']['Year'].to_list())
-  st.session_state['range_end'] = max(st.session_state['demand']['Year'].to_list())

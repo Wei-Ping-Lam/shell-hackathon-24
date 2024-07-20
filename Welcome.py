@@ -5,24 +5,15 @@ import seaborn as sns
 from matplotlib import rc, font_manager, cm
 
 if 'carbon_emissions' not in st.session_state:
-  carbon_emissions_df = pd.read_csv('./dataset/carbon_emissions.csv')
-  st.session_state['carbon_emissions'] = carbon_emissions_df
-
+  st.session_state['carbon_emissions'] = pd.read_csv('./dataset/carbon_emissions.csv')
 if 'cost_profiles' not in st.session_state:
-  cost_profiles_df = pd.read_csv('dataset/cost_profiles.csv')
-  st.session_state['cost_profiles'] = cost_profiles_df
-
+  st.session_state['cost_profiles'] = pd.read_csv('dataset/cost_profiles.csv')
 if 'vehicles_fuels' not in st.session_state:
-  vehicles_fuels_df = pd.read_csv('dataset/vehicles_fuels.csv')
-  st.session_state['vehicles_fuels'] = vehicles_fuels_df
-
+  st.session_state['vehicles_fuels'] = pd.read_csv('dataset/vehicles_fuels.csv')
 if 'fuels' not in st.session_state:
-  fuels_df = pd.read_csv('dataset/fuels.csv')
-  st.session_state['fuels'] = fuels_df
-
+  st.session_state['fuels'] = pd.read_csv('dataset/fuels.csv')
 if 'vehicles' not in st.session_state:
-  vehicles_df = pd.read_csv('dataset/vehicles.csv')
-  st.session_state['vehicles'] = vehicles_df
+  st.session_state['vehicles'] = pd.read_csv('dataset/vehicles.csv')
 
 st.set_page_config(layout="centered")
 st.title("Fleet Decarbonization")
