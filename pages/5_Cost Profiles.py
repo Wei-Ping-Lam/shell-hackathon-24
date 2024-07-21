@@ -22,6 +22,8 @@ if not st.session_state['cost_profiles'].equals(cost_profiles_df):
     st.session_state['cost_profiles'] = cost_profiles_df
     st.rerun()
 if not st.session_state['cost_profiles'].equals(st.session_state['original_cost_profiles']):
+  st.session_state['changedCP'] = True
   if st.button('Reset to default'):
+    st.session_state['changedCP'] = False
     st.session_state['cost_profiles'] = st.session_state['original_cost_profiles']
     st.rerun()

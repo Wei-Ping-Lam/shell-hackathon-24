@@ -25,7 +25,9 @@ if st.session_state['vehicles'].equals(st.session_state['original_vehicles']):
     st.session_state['vehicles'] = pd.read_csv(new_vehicles)
     st.rerun()
 if not st.session_state['vehicles'].equals(st.session_state['original_vehicles']):
+  st.session_state['changedV'] = True
   if col1.button('Reset to default', key = 'k1'):
+    st.session_state['changedV'] = False
     st.session_state['vehicles'] = st.session_state['original_vehicles']
     st.rerun()
 
@@ -40,7 +42,9 @@ if st.session_state['fuels'].equals(st.session_state['original_fuels']):
     st.session_state['fuels'] = pd.read_csv(new_fuels)
     st.rerun()
 if not st.session_state['fuels'].equals(st.session_state['original_fuels']):
+  st.session_state['changedF'] = True
   if col2.button('Reset to default', key = 'k2'):
+    st.session_state['changedF'] = False
     st.session_state['fuels'] = st.session_state['original_fuels']
     st.rerun()
 
@@ -55,6 +59,8 @@ if st.session_state['vehicles_fuels'].equals(st.session_state['original_vehicles
     st.session_state['vehicles_fuels'] = pd.read_csv(new_vehicles_fuels)
     st.rerun()
 if not st.session_state['vehicles_fuels'].equals(st.session_state['original_vehicles_fuels']):
+  st.session_state['changedVF'] = True
   if col3.button('Reset to default', key = 'k3'):
+    st.session_state['changedVF'] = False
     st.session_state['vehicles_fuels'] = st.session_state['original_vehicles_fuels']
     st.rerun()

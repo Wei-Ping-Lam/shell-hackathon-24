@@ -2,7 +2,16 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(layout="centered")
-
+if 'carbon_emissions' not in st.session_state:
+  st.session_state['carbon_emissions'] = pd.read_csv('./dataset/carbon_emissions.csv')
+if 'cost_profiles' not in st.session_state:
+  st.session_state['cost_profiles'] = pd.read_csv('dataset/cost_profiles.csv')
+if 'vehicles_fuels' not in st.session_state:
+  st.session_state['vehicles_fuels'] = pd.read_csv('dataset/vehicles_fuels.csv')
+if 'fuels' not in st.session_state:
+  st.session_state['fuels'] = pd.read_csv('dataset/fuels.csv')
+if 'vehicles' not in st.session_state:
+  st.session_state['vehicles'] = pd.read_csv('dataset/vehicles.csv')
 if 'demand' not in st.session_state:
   st.header("Input your demand")
   st.markdown("For each year (2023-2038), there should be 16 inputs. Each 4 vehicle sizes should be included in each 4 distance buckets.")

@@ -25,7 +25,9 @@ if not st.session_state['carbon_emissions'].equals(carbon_emissions_df):
     st.session_state['carbon_emissions'] = carbon_emissions_df
     st.rerun()
 if not st.session_state['carbon_emissions'].equals(st.session_state['original_carbon_emissions']):
+  st.session_state['changedE'] = True
   if col5.button('Reset to default'):
+    st.session_state['changedE'] = False
     st.session_state['carbon_emissions'] = st.session_state['original_carbon_emissions']
     st.rerun()
 
