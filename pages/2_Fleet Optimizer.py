@@ -18,27 +18,32 @@ if 'demand' not in st.session_state:
   if col2.button('Go to Demand page'):
     st.switch_page("pages/1_Demand.py")
 
-def main_fun():
-  with col2.status("Optimizing...", expanded=True) as status:
-    st.write("Creating Strong Initial Solution...")
+def sol_fun():
+  if 'carbon_emissions' not in st.session_state:
+    st.session_state['carbon_emissions'] = pd.read_csv('./dataset/carbon_emissions.csv')
+  if 'cost_profiles' not in st.session_state:
+    st.session_state['cost_profiles'] = pd.read_csv('dataset/cost_profiles.csv')
+  if 'vehicles_fuels' not in st.session_state:
+    st.session_state['vehicles_fuels'] = pd.read_csv('dataset/vehicles_fuels.csv')
+  if 'fuels' not in st.session_state:
+    st.session_state['fuels'] = pd.read_csv('dataset/fuels.csv')
+  if 'vehicles' not in st.session_state:
+    st.session_state['vehicles'] = pd.read_csv('dataset/vehicles.csv')
+  
+  st.session_state['sol_demand'] = st.session_state['demand']
+  st.session_state['sol_carbon_emissions'] = st.session_state['carbon_emissions']
+  st.session_state['sol_cost_profiles'] = st.session_state['cost_profiles']
+  st.session_state['sol_vehicles_fuels'] = st.session_state['vehicles_fuels']
+  st.session_state['sol_fuels'] = st.session_state['fuels']
+  st.session_state['sol_vehicles'] = st.session_state['vehicles']
 
-    if 'carbon_emissions' not in st.session_state:
-      st.session_state['carbon_emissions'] = pd.read_csv('./dataset/carbon_emissions.csv')
-    if 'cost_profiles' not in st.session_state:
-      st.session_state['cost_profiles'] = pd.read_csv('dataset/cost_profiles.csv')
-    if 'vehicles_fuels' not in st.session_state:
-      st.session_state['vehicles_fuels'] = pd.read_csv('dataset/vehicles_fuels.csv')
-    if 'fuels' not in st.session_state:
-      st.session_state['fuels'] = pd.read_csv('dataset/fuels.csv')
-    if 'vehicles' not in st.session_state:
-      st.session_state['vehicles'] = pd.read_csv('dataset/vehicles.csv')
-    
-    st.session_state['sol_demand'] = st.session_state['demand']
-    st.session_state['sol_carbon_emissions'] = st.session_state['carbon_emissions']
-    st.session_state['sol_cost_profiles'] = st.session_state['cost_profiles']
-    st.session_state['sol_vehicles_fuels'] = st.session_state['vehicles_fuels']
-    st.session_state['sol_fuels'] = st.session_state['fuels']
-    st.session_state['sol_vehicles'] = st.session_state['vehicles']
+def main_fun():
+  start_time = time.time()
+  with col2.status("Optimizing...", expanded=True) as status:
+    progress_text = "Creating Strong Initial Solution..."
+    my_bar = st.progress(0, text=progress_text)
+
+    sol_fun()
 
     demand_df = st.session_state['demand']
     cost_profiles_df = st.session_state['cost_profiles']
@@ -118,29 +123,1431 @@ def main_fun():
       demand_demand = demand_df['Demand (km)'][i]
       demand.append(Demand(demand_year, demand_size, demand_distance, demand_demand))
 
+    def weiping(y_start, demanz, fleez, grups, grup2):
+      demand = copy.deepcopy(demanz)
+      fleet = copy.deepcopy(fleez)
+      groups = copy.deepcopy(grups)
+      
+      if len(grups) == 0:
+        group = {"S1 D1": {}, "S1 D2": {}, "S1 D3": {}, "S1 D4": {}, "S2 D1": {}, "S2 D2": {}, "S2 D3": {}, "S2 D4": {}, "S3 D1": {}, "S3 D2": {}, "S3 D3": {}, "S3 D4": {}, "S4 D1": {}, "S4 D2": {}, "S4 D3": {}, "S4 D4": {},}
+      else:
+        group = copy.deepcopy(grup2)
+      
+      alpha = 0.20
+      beta = 11
 
+      maininscost = []
+      for i in range(6, 7+beta*10, beta):
+        maininscost.append(i)
+      sellcost = [90, 80, 70, 60, 50, 40, 30, 30, 30, 30, 30]
+      number_of_cars_sold = []
+      for y in range(16):
+        count = 0
+        for i in range(y*16, (y+1)*16):
+          size = demand[i].size
+          dem = demand[i]._demand
+          factor = [102000, 106000, 73000, 118000]
+          count += math.ceil(dem/factor[int(size[1])-1])
+        if 'sell_percent' in st.session_state:
+          number_of_cars_sold.append(math.floor(count*st.session_state['sell_percent']/100))
+        else:
+          number_of_cars_sold.append(math.floor(count*0.20))
 
+      for y in range(y_start, 16):
+        for i in range(y*16, (y+1)*16):
+          year = demand[i].year
+          size = demand[i].size
+          distance = demand[i].distance
+          group_id = size+" "+distance
+          dem = demand[i]._demand
+          factor = [102000, 106000, 73000, 118000]
+          num  = math.ceil(dem/factor[int(size[1])-1])
+          dem = dem/num
+          num -= sum(group[group_id].values())
 
+          
+          potential_vehicles = []
+          if int(distance[1]) == 2 and year < 2026:
+            potential_vehicles = ['LNG_'+size+'_'+str(year), 'Diesel_'+size+'_'+str(year)]
+          elif int(distance[1]) == 3 and year < 2029:
+            potential_vehicles = ['LNG_'+size+'_'+str(year), 'Diesel_'+size+'_'+str(year)]
+          elif int(distance[1]) == 4 and year < 2032:
+            potential_vehicles = ['LNG_'+size+'_'+str(year), 'Diesel_'+size+'_'+str(year)]
+          else:
+            potential_vehicles = ['BEV_'+size+'_'+str(year), 'LNG_'+size+'_'+str(year), 'Diesel_'+size+'_'+str(year)]
+          if num > 0:  
+            costs = {}
+            for veh in potential_vehicles:
+              phys_costs = 0.16*Vehicles[veh].cost
 
+              fuel_consumption = 0
+              rate = 0
+              if veh[:3] == 'BEV':
+                rate = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                fuel_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='Electricity']['Consumption (unit_fuel/km)'].tolist()[0]
+              elif veh[:3] == 'LNG':
+                rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                rates = [rate1, rate2]
+                fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                rate = rates[multi.index(min(multi))]
+                fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+              elif veh[:3] == 'Die':
+                rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                rates = [rate1, rate2]
+                fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                rate = rates[multi.index(min(multi))]
+                fuel_consumption = fuel_consumptions[multi.index(min(multi))]
 
+              fuel_costs = dem*rate*fuel_consumption
+              costs[phys_costs+fuel_costs] = [veh, num]
+            group[group_id][costs[min(costs.keys())][0]] = num
+            if costs[min(costs.keys())][0] in fleet:
+              fleet[costs[min(costs.keys())][0]] += num
+            else:
+              fleet[costs[min(costs.keys())][0]] = num
 
+          min_rate = {}
+          for veh, quant in group[group_id].items():
+            fuel_consumption = 0
+            rate = 0
+            f = ''
+            if veh[:3] == 'BEV':
+              rate = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+              fuel_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='Electricity']['Consumption (unit_fuel/km)'].tolist()[0]
+              f = 'Electricity'
+            elif veh[:3] == 'LNG':
+              rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+              fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+              rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+              fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+              rates = [rate1, rate2]
+              fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+              fs = ['LNG', 'BioLNG']
+              multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+              rate = rates[multi.index(min(multi))]
+              fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+              f = fs[multi.index(min(multi))]
+            elif veh[:3] == 'Die':
+              rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+              fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+              rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+              fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+              rates = [rate1, rate2]
+              fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+              fs = ['B20', 'HVO']
+              multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+              rate = rates[multi.index(min(multi))]
+              fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+              f = fs[multi.index(min(multi))]
+            valuee = rate*fuel_consumption+(float(veh[-2:])*0.000000001)
+            min_rate[valuee] = [veh, f]
+          dem = demand[i]._demand
+          while True:
+            veh = min_rate[min(min_rate.keys())][0]
+            f = min_rate[min(min_rate.keys())][1]
+            del min_rate[min(min_rate.keys())]
+            if len(min_rate) == 0:
+              if group[group_id][veh] > 1 and Vehicles[veh].year == year:
+                fuel_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']==f]['Consumption (unit_fuel/km)'].tolist()[0]
+                rate = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']==f]['Cost ($/unit_fuel)'].tolist()[0]
 
+                phys_costs = 0.16*Vehicles[veh].cost*(group[group_id][veh])
+                fuel_costs = fuel_consumption*rate*dem
 
+                phys_costs_hi = 0.16*Vehicles[veh].cost*(group[group_id][veh]-1)
+                dem_hi = (group[group_id][veh]-1)*factor[int(size[1])-1]
+                fuel_costs_hi = fuel_consumption*rate*dem_hi
+                dem_low = dem - dem_hi
+                costs_low = {}
+                for veh_low in potential_vehicles:
+                  if veh_low != veh:
+                    phys_costs_low = 0.16*Vehicles[veh_low].cost
 
+                    rate_low = 0
+                    fuel_consumption_low = 0
+                    g = ''
+                    if veh_low[:3] == 'BEV':
+                      rate_low = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption_low = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low]['Fuel']=='Electricity']['Consumption (unit_fuel/km)'].tolist()[0]
+                      g = 'Electricity'
+                    elif veh_low[:3] == 'LNG':
+                      rate_low1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption_low1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate_low2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption_low2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate_lows = [rate_low1, rate_low2]
+                      fuel_consumption_lows = [fuel_consumption_low1, fuel_consumption_low2]
+                      gs = ['LNG', 'BioLNG']
+                      multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                      rate_low = rate_lows[multi.index(min(multi))]
+                      fuel_consumption_low = fuel_consumption_lows[multi.index(min(multi))]
+                      g = gs[multi.index(min(multi))]
+                    elif veh_low[:3] == 'Die':
+                      rate_low1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption_low1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate_low2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption_low2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_low]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate_lows = [rate_low1, rate_low2]
+                      fuel_consumption_lows = [fuel_consumption_low1, fuel_consumption_low2]
+                      gs = ['B20', 'HVO']
+                      multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                      rate_low = rate_lows[multi.index(min(multi))]
+                      fuel_consumption_low = fuel_consumption_lows[multi.index(min(multi))]
+                      g = gs[multi.index(min(multi))]
+                    fuel_costs_low = dem_low*rate_low*fuel_consumption_low
+                    costs_low[phys_costs_low+fuel_costs_low] = [veh_low, g, dem_low]
+                if min(costs_low.keys())+phys_costs_hi+fuel_costs_hi < phys_costs+fuel_costs:
+                  demand[i].add_vehicle(veh, group[group_id][veh]-1, f, factor[int(size[1])-1])
+                  group[group_id][veh] -= 1
+                  fleet[veh] -= 1
 
+                  rep = costs_low[min(costs_low.keys())]
+                  demand[i].add_vehicle(rep[0], 1, rep[1], dem_low)
 
+                  group[group_id][rep[0]] = 1
+                  if rep[0] in fleet:
+                    fleet[rep[0]] += 1
+                  else:
+                    fleet[rep[0]] = 1
 
+                else: 
+                  demand[i].add_vehicle(veh, group[group_id][veh], f, dem/group[group_id][veh]+0.000000001)
+                break
+              else:
+                demand[i].add_vehicle(veh, group[group_id][veh], f, dem/group[group_id][veh]+0.000000001)
+                break
+            else:
+              demand[i].add_vehicle(veh, group[group_id][veh], f,  factor[int(size[1])-1])
+              dem -= factor[int(size[1])-1]*group[group_id][veh]
 
+        keep_costs = {}   
+        for veh in fleet.keys():
+          veh_year = Vehicles[veh].year
+          time = y+2023 - veh_year + 1
+          ins_mtn_costs = maininscost[time]/100*Vehicles[veh].cost
+          sell_costs = (sellcost[time-1]-sellcost[time])/100*Vehicles[veh].cost
+          new_veh = veh[:-4]+str(y+2023)
+          replace_cost = 0.1*(Vehicles[new_veh].cost-Vehicles[veh].cost)
+          coooost = ins_mtn_costs+sell_costs-replace_cost
+          keep_costs[coooost] = veh
 
+        sell_num = number_of_cars_sold[y]
+        groups.append(copy.deepcopy(group))
+
+        cars_2023 = {}
+        cars_2024 = {}
+        cars_2025 = {}
+        cars_2026 = {}
+        cars_2027 = {}
+        cars_2028 = {}
+        for veh_ID, quant in fleet.items():
+          if int(veh_ID[-4:]) == 2023:
+            cars_2023[veh_ID] = quant
+          if int(veh_ID[-4:]) == 2024:
+            cars_2024[veh_ID] = quant
+          if int(veh_ID[-4:]) == 2025:
+            cars_2025[veh_ID] = quant
+          if int(veh_ID[-4:]) == 2026:
+            cars_2026[veh_ID] = quant
+          if int(veh_ID[-4:]) == 2027:
+            cars_2027[veh_ID] = quant
+          if int(veh_ID[-4:]) == 2028:
+            cars_2028[veh_ID] = quant
+
+        flag23 = True
+        flag24 = True
+        flag25 = True
+        flag26 = True
+        flag27 = True
+        flag28 = True
+
+        while True:
+          if y < 10 and flag23 and sell_num > 0:
+            flag23 = False
+            if math.ceil(sum(number_of_cars_sold[y+1:10])*alpha) < sum(cars_2023.values()):
+              selling = sum(cars_2023.values()) - math.ceil(sum(number_of_cars_sold[y+1:10])*alpha)
+              if selling > sell_num:
+                continue
+              sell_num -= selling
+              keep_costs_2023 = {}
+              for veh, quant in cars_2023.items():
+                veh_year = Vehicles[veh].year
+                time = y+2023 - veh_year + 1
+                ins_mtn_costs = maininscost[time]/100*Vehicles[veh].cost
+                sell_costs = (sellcost[time-1]-sellcost[time])/100*Vehicles[veh].cost
+                new_veh = veh[:-4]+str(y+2023)
+                replace_cost = 0.1*(Vehicles[new_veh].cost-Vehicles[veh].cost)
+                coooost = ins_mtn_costs+sell_costs-replace_cost
+                keep_costs_2023[coooost] = veh
+              while True:
+                highest = keep_costs_2023[max(keep_costs_2023.keys())]
+                candids = []
+                for grou, fle in group.items():
+                  if highest in fle.keys():
+                    candids.append(grou)
+
+                if selling > fleet[highest]:
+                  selling -= fleet[highest]
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2023.keys())]
+                  del keep_costs_2023[max(keep_costs_2023.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  continue
+                elif selling == fleet[highest]:
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2023.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  break
+                else:
+                  fleet[highest] -= selling
+                  num_cand = len(candids)
+                  disti = []
+                  for h in range(len(candids)):
+                    disti.append(int(candids[h][-1]))
+                  while True:
+                    min_dist = min(disti)
+                    candid = candids[0][:4] + str(min_dist)
+                    if selling > group[candid][highest]:
+                      selling -= group[candid][highest]
+                      del group[candid][highest]
+                      disti.remove(min_dist)
+                    elif selling == group[candid][highest]:
+                      del group[candid][highest]
+                      break
+                    else:
+                      group[candid][highest] -= selling
+                      break
+                  break
+          if y < 11 and flag24 and sell_num > 0:
+            flag24 = False
+            if math.ceil(sum(number_of_cars_sold[y+1:11])*alpha) < sum(cars_2024.values()):
+              selling = sum(cars_2024.values()) - math.ceil(sum(number_of_cars_sold[y+1:11])*alpha)
+              sell_num -= selling
+              keep_costs_2024 = {}
+              for veh, quant in cars_2024.items():
+                veh_year = Vehicles[veh].year
+                time = y+2023 - veh_year + 1
+                ins_mtn_costs = maininscost[time]/100*Vehicles[veh].cost
+                sell_costs = (sellcost[time-1]-sellcost[time])/100*Vehicles[veh].cost
+                new_veh = veh[:-4]+str(y+2023)
+                replace_cost = 0.1*(Vehicles[new_veh].cost-Vehicles[veh].cost)
+                coooost = ins_mtn_costs+sell_costs-replace_cost
+                keep_costs_2024[coooost] = veh
+              while True:
+                highest = keep_costs_2024[max(keep_costs_2024.keys())]
+                candids = []
+                for grou, fle in group.items():
+                  if highest in fle.keys():
+                    candids.append(grou)
+
+                if selling > fleet[highest]:
+                  selling -= fleet[highest]
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2024.keys())]
+                  del keep_costs_2024[max(keep_costs_2024.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  continue
+                elif selling == fleet[highest]:
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2024.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  break
+                else:
+                  fleet[highest] -= selling
+                  num_cand = len(candids)
+                  disti = []
+                  for h in range(len(candids)):
+                    disti.append(int(candids[h][-1]))
+                  while True:
+                    min_dist = min(disti)
+                    candid = candids[0][:4] + str(min_dist)
+                    if selling > group[candid][highest]:
+                      selling -= group[candid][highest]
+                      del group[candid][highest]
+                      disti.remove(min_dist)
+                    elif selling == group[candid][highest]:
+                      del group[candid][highest]
+                      break
+                    else:
+                      group[candid][highest] -= selling
+                      break
+                  break
+          if y < 12 and flag25 and sell_num > 0:
+            flag25 = False
+            if math.ceil(sum(number_of_cars_sold[y+1:12])*alpha) < sum(cars_2025.values()):
+              selling = sum(cars_2025.values()) - math.ceil(sum(number_of_cars_sold[y+1:12])*alpha)
+              sell_num -= selling
+              keep_costs_2025 = {}
+              for veh, quant in cars_2025.items():
+                veh_year = Vehicles[veh].year
+                time = y+2023 - veh_year + 1
+                ins_mtn_costs = maininscost[time]/100*Vehicles[veh].cost
+                sell_costs = (sellcost[time-1]-sellcost[time])/100*Vehicles[veh].cost
+                new_veh = veh[:-4]+str(y+2023)
+                replace_cost = 0.1*(Vehicles[new_veh].cost-Vehicles[veh].cost)
+                coooost = ins_mtn_costs+sell_costs-replace_cost
+                keep_costs_2025[coooost] = veh
+              while True:
+                highest = keep_costs_2025[max(keep_costs_2025.keys())]
+                candids = []
+                for grou, fle in group.items():
+                  if highest in fle.keys():
+                    candids.append(grou)
+
+                if selling > fleet[highest]:
+                  selling -= fleet[highest]
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2025.keys())]
+                  del keep_costs_2025[max(keep_costs_2025.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  continue
+                elif selling == fleet[highest]:
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2025.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  break
+                else:
+                  fleet[highest] -= selling
+                  num_cand = len(candids)
+                  disti = []
+                  for h in range(len(candids)):
+                    disti.append(int(candids[h][-1]))
+                  while True:
+                    min_dist = min(disti)
+                    candid = candids[0][:4] + str(min_dist)
+                    if selling > group[candid][highest]:
+                      selling -= group[candid][highest]
+                      del group[candid][highest]
+                      disti.remove(min_dist)
+                    elif selling == group[candid][highest]:
+                      del group[candid][highest]
+                      break
+                    else:
+                      group[candid][highest] -= selling
+                      break
+                  break
+          if y < 13 and flag26 and sell_num > 0:
+            flag26 = False
+            if math.ceil(sum(number_of_cars_sold[y+1:13])*alpha) < sum(cars_2026.values()):
+              selling = sum(cars_2026.values()) - math.ceil(sum(number_of_cars_sold[y+1:13])*alpha)
+              sell_num -= selling
+              keep_costs_2026 = {}
+              for veh, quant in cars_2026.items():
+                veh_year = Vehicles[veh].year
+                time = y+2023 - veh_year + 1
+                ins_mtn_costs = maininscost[time]/100*Vehicles[veh].cost
+                sell_costs = (sellcost[time-1]-sellcost[time])/100*Vehicles[veh].cost
+                new_veh = veh[:-4]+str(y+2023)
+                replace_cost = 0.1*(Vehicles[new_veh].cost-Vehicles[veh].cost)
+                coooost = ins_mtn_costs+sell_costs-replace_cost
+                keep_costs_2026[coooost] = veh
+              while True:
+                highest = keep_costs_2026[max(keep_costs_2026.keys())]
+                candids = []
+                for grou, fle in group.items():
+                  if highest in fle.keys():
+                    candids.append(grou)
+
+                if selling > fleet[highest]:
+                  selling -= fleet[highest]
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2026.keys())]
+                  del keep_costs_2026[max(keep_costs_2026.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  continue
+                elif selling == fleet[highest]:
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2026.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  break
+                else:
+                  fleet[highest] -= selling
+                  num_cand = len(candids)
+                  disti = []
+                  for h in range(len(candids)):
+                    disti.append(int(candids[h][-1]))
+                  while True:
+                    min_dist = min(disti)
+                    candid = candids[0][:4] + str(min_dist)
+                    if selling > group[candid][highest]:
+                      selling -= group[candid][highest]
+                      del group[candid][highest]
+                      disti.remove(min_dist)
+                    elif selling == group[candid][highest]:
+                      del group[candid][highest]
+                      break
+                    else:
+                      group[candid][highest] -= selling
+                      break
+                  break
+          if y < 14 and flag27 and sell_num > 0:
+            flag27 = False
+            if math.ceil(sum(number_of_cars_sold[y+1:14])*alpha) < sum(cars_2027.values()):
+              selling = sum(cars_2027.values()) - math.ceil(sum(number_of_cars_sold[y+1:14])*alpha)
+              sell_num -= selling
+              keep_costs_2027 = {}
+              for veh, quant in cars_2027.items():
+                veh_year = Vehicles[veh].year
+                time = y+2023 - veh_year + 1
+                ins_mtn_costs = maininscost[time]/100*Vehicles[veh].cost
+                sell_costs = (sellcost[time-1]-sellcost[time])/100*Vehicles[veh].cost
+                new_veh = veh[:-4]+str(y+2023)
+                replace_cost = 0.1*(Vehicles[new_veh].cost-Vehicles[veh].cost)
+                coooost = ins_mtn_costs+sell_costs-replace_cost
+                keep_costs_2027[coooost] = veh
+              while True:
+                highest = keep_costs_2027[max(keep_costs_2027.keys())]
+                candids = []
+                for grou, fle in group.items():
+                  if highest in fle.keys():
+                    candids.append(grou)
+
+                if selling > fleet[highest]:
+                  selling -= fleet[highest]
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2027.keys())]
+                  del keep_costs_2027[max(keep_costs_2027.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  continue
+                elif selling == fleet[highest]:
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2027.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  break
+                else:
+                  fleet[highest] -= selling
+                  num_cand = len(candids)
+                  disti = []
+                  for h in range(len(candids)):
+                    disti.append(int(candids[h][-1]))
+                  while True:
+                    min_dist = min(disti)
+                    candid = candids[0][:4] + str(min_dist)
+                    if selling > group[candid][highest]:
+                      selling -= group[candid][highest]
+                      del group[candid][highest]
+                      disti.remove(min_dist)
+                    elif selling == group[candid][highest]:
+                      del group[candid][highest]
+                      break
+                    else:
+                      group[candid][highest] -= selling
+                      break
+                  break
+          if y < 15 and flag28 and sell_num > 0:
+            flag28 = False
+            if math.ceil(sum(number_of_cars_sold[y+1:15])*alpha) < sum(cars_2028.values()):
+              selling = sum(cars_2028.values()) - math.ceil(sum(number_of_cars_sold[y+1:15])*alpha)
+              sell_num -= selling
+
+              keep_costs_2028 = {}
+              for veh, quant in cars_2028.items():
+                veh_year = Vehicles[veh].year
+                time = y+2023 - veh_year + 1
+                ins_mtn_costs = maininscost[time]/100*Vehicles[veh].cost
+                sell_costs = (sellcost[time-1]-sellcost[time])/100*Vehicles[veh].cost
+                new_veh = veh[:-4]+str(y+2023)
+                replace_cost = 0.1*(Vehicles[new_veh].cost-Vehicles[veh].cost)
+                coooost = ins_mtn_costs+sell_costs-replace_cost
+                keep_costs_2028[coooost] = veh
+              while True:
+                highest = keep_costs_2028[max(keep_costs_2028.keys())]
+                candids = []
+                for grou, fle in group.items():
+                  if highest in fle.keys():
+                    candids.append(grou)
+
+                if selling > fleet[highest]:
+                  selling -= fleet[highest]
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2028.keys())]
+                  del keep_costs_2028[max(keep_costs_2028.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  continue
+                elif selling == fleet[highest]:
+                  del fleet[highest]
+                  del keep_costs[max(keep_costs_2028.keys())]
+                  for gro in candids:
+                    del group[gro][highest]
+                  break
+                else:
+                  fleet[highest] -= selling
+                  num_cand = len(candids)
+                  disti = []
+                  for h in range(len(candids)):
+                    disti.append(int(candids[h][-1]))
+                  while True:
+                    min_dist = min(disti)
+                    candid = candids[0][:4] + str(min_dist)
+                    if selling > group[candid][highest]:
+                      selling -= group[candid][highest]
+                      del group[candid][highest]
+                      disti.remove(min_dist)
+                    elif selling == group[candid][highest]:
+                      del group[candid][highest]
+                      break
+                    else:
+                      group[candid][highest] -= selling
+                      break
+                  break
+
+          if sell_num <= 0:
+            break
+          highest = keep_costs[max(keep_costs.keys())]
+          candids = []
+          for grou, fle in group.items():
+            if highest in fle.keys():
+              candids.append(grou)
+          if sell_num > fleet[highest]:
+            sell_num -= fleet[highest]
+            del fleet[highest]
+            del keep_costs[max(keep_costs.keys())]
+            for gro in candids:
+              del group[gro][highest]
+            continue
+          elif sell_num == fleet[highest]:
+            del fleet[highest]
+            for gro in candids:
+              del group[gro][highest]
+            break
+          else:
+            fleet[highest] -= sell_num
+            num_cand = len(candids)
+            disti = []
+            for h in range(len(candids)):
+              disti.append(int(candids[h][-1]))
+            while True:
+              min_dist = min(disti)
+              candid = candids[0][:4] + str(min_dist)
+              if sell_num > group[candid][highest]:
+                sell_num -= group[candid][highest]
+                del group[candid][highest]
+                disti.remove(min_dist)
+                continue
+              elif sell_num == group[candid][highest]:
+                del group[candid][highest]
+                break
+              else:
+                group[candid][highest] -= sell_num
+                break
+            break
+      categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
+
+      new_demand = []
+      for i in range(len(demand_df)):
+        demand_year = demand_df['Year'][i]
+        demand_size = demand_df['Size'][i]
+        demand_distance = demand_df['Distance'][i]
+        demand_demand = demand_df['Demand (km)'][i]
+        new_demand.append(Demand(demand_year, demand_size, demand_distance, demand_demand))
+
+      for c in range(16):
+        category = []
+        years = 2022
+        for gro in groups:
+          years += 1
+          for veh, quant in gro[categories[c]].items():
+            if int(veh[-4:]) == years:
+              for _ in range(quant):
+                category = category + [{veh:[]}]
+        for y in range(16):
+          for i in range(y*16, (y+1)*16):
+            if i%16 == c:
+              vehicles_used = copy.deepcopy(demand[i].met_by)
+              for veh, lissst in vehicles_used.items():
+                indx = next((category.index(x) for x in category if veh in x.keys()), 'ok')
+                for k in range(lissst[0]):
+                  category[k+indx][veh].append(lissst[2])
+        size = categories[c][:2]
+        distance = categories[c][3:]
+        new_cat = []
+        for V in category:
+          for veh, uses in V.items():
+            yeard = veh[-4:]
+            if int(distance[1]) == 2 and int(yeard) < 2026:
+              pot_veh_ids = ['LNG_'+size+'_'+yeard, 'Diesel_'+size+'_'+yeard]
+            elif int(distance[1]) == 3 and int(yeard) < 2029:
+              pot_veh_ids = ['LNG_'+size+'_'+yeard, 'Diesel_'+size+'_'+yeard]
+            elif int(distance[1]) == 4 and int(yeard) < 2032:
+              pot_veh_ids = ['LNG_'+size+'_'+yeard, 'Diesel_'+size+'_'+yeard]
+            else:
+              pot_veh_ids = ['BEV_'+size+'_'+yeard, 'LNG_'+size+'_'+yeard, 'Diesel_'+size+'_'+yeard]
+
+            num_of_years_used = len(uses)
+            maininscost = [6, 9, 12, 15, 18, 21, 24, 27, 30, 33]
+            sellcost = [90, 80, 70, 60, 50, 40, 30, 30, 30, 30]
+            maininsperc = sum(maininscost[:num_of_years_used])/100
+            sellperc = sellcost[num_of_years_used-1]/100
+            totalcosts = []
+            for veh_Id in pot_veh_ids:
+              phy_costs = Vehicles[veh_Id].cost*(maininsperc+1-sellperc)
+              fuel_costs = 0
+              fuel_consumption = 0
+              rate = 0
+              yearr = int(veh_Id[-4:])
+              for km in range(len(uses)):
+                range_ = uses[km]
+                yearrr = yearr+km
+                if veh_Id[:3] == 'BEV':
+                  rate = fuels_df.loc[fuels_df['Year'] == yearrr].loc[fuels_df.loc[fuels_df['Year'] == yearrr]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id]['Fuel']=='Electricity']['Consumption (unit_fuel/km)'].tolist()[0]
+                if veh_Id[:3] == 'LNG':
+                  rate1 = fuels_df.loc[fuels_df['Year'] == yearrr].loc[fuels_df.loc[fuels_df['Year'] == yearrr]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rate2 = fuels_df.loc[fuels_df['Year'] == yearrr].loc[fuels_df.loc[fuels_df['Year'] == yearrr]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rates = [rate1, rate2]
+                  fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                  multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                  rate = rates[multi.index(min(multi))]
+                  fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                if veh_Id[:3] == 'Die':
+                  rate1 = fuels_df.loc[fuels_df['Year'] == yearrr].loc[fuels_df.loc[fuels_df['Year'] == yearrr]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rate2 = fuels_df.loc[fuels_df['Year'] == yearrr].loc[fuels_df.loc[fuels_df['Year'] == yearrr]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh_Id]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rates = [rate1, rate2]
+                  fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                  multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                  rate = rates[multi.index(min(multi))]
+                  fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                  
+                fuel_costs += range_*rate*fuel_consumption
+              totalcosts.append(fuel_costs+phy_costs)
+            idx = totalcosts.index(min(totalcosts))
+            if int(yeard)-2023 >= y_start:
+              new_cat.append({pot_veh_ids[idx]: uses})
+            else:
+              new_cat.append({veh: uses})
+
+        for y in range(16):
+          for i in range(y*16, (y+1)*16):
+            if i%16 == c:
+              for V in new_cat:
+                for veh, uses in V.items():
+                  if y+2023 <= int(veh[-4:])+len(uses)-1 and y+2023 >= int(veh[-4:]):
+                    ye = y+2023-int(veh[-4:])
+                    if veh in new_demand[i].met_by and uses[ye] == new_demand[i].met_by[veh][2]:
+                      new_demand[i].met_by[veh][0] += 1
+                    elif veh in new_demand[i].met_by and uses[ye] != new_demand[i].met_by[veh][2]:
+                      orig = new_demand[i].met_by[veh][0]
+                      distss = orig*new_demand[i].met_by[veh][2] + uses[ye]
+                      new_demand[i].met_by[veh][2] = distss/(orig+1)+0.00000000001
+                      new_demand[i].met_by[veh][0] += 1
+                    else:
+                      yaer = y+2023
+                      f = 0
+                      if veh[:3] == 'BEV':
+                        f = 'Electricity'
+                      elif veh[:3] == 'LNG':
+                        rate1 = fuels_df.loc[fuels_df['Year'] == yaer].loc[fuels_df.loc[fuels_df['Year'] == yaer]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                        rate2 = fuels_df.loc[fuels_df['Year'] == yaer].loc[fuels_df.loc[fuels_df['Year'] == yaer]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                        multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                        fs = ['LNG', 'BioLNG']
+                        f = fs[multi.index(min(multi))]
+                      elif veh[:3] == 'Die':
+                        rate1 = fuels_df.loc[fuels_df['Year'] == yaer].loc[fuels_df.loc[fuels_df['Year'] == yaer]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                        rate2 = fuels_df.loc[fuels_df['Year'] == yaer].loc[fuels_df.loc[fuels_df['Year'] == yaer]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                        multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                        fs = ['B20', 'HVO']
+                        f = fs[multi.index(min(multi))]
+                      new_demand[i].add_vehicle(veh, 1, copy.deepcopy(f), uses[ye])
+      
+      new_fleet = {}
+      new_group2 = {"S1 D1": {}, "S1 D2": {}, "S1 D3": {}, "S1 D4": {}, "S2 D1": {}, "S2 D2": {}, "S2 D3": {}, "S2 D4": {}, "S3 D1": {}, "S3 D2": {}, "S3 D3": {}, "S3 D4": {}, "S4 D1": {}, "S4 D2": {}, "S4 D3": {}, "S4 D4": {}}
+      for y in range(y_start+1, y_start+2):
+        if y == 16:
+          break
+        for i in range(y*16, (y+1)*16):
+          siz = new_demand[i].size
+          distancc = new_demand[i].distance
+          grouu = siz + ' ' + distancc
+          for veh, liss in new_demand[i].met_by.items():
+            if int(veh[-4:]) != y+2023:
+              new_group2[grouu][veh] = liss[0]
+              if veh in new_fleet:
+                new_fleet[veh] += liss[0]
+              else:
+                new_fleet[veh] = liss[0]
+                      
+      new_group = {"S1 D1": {}, "S1 D2": {}, "S1 D3": {}, "S1 D4": {}, "S2 D1": {}, "S2 D2": {}, "S2 D3": {}, "S2 D4": {}, "S3 D1": {}, "S3 D2": {}, "S3 D3": {}, "S3 D4": {}, "S4 D1": {}, "S4 D2": {}, "S4 D3": {}, "S4 D4": {}}
+      for y in range(y_start, y_start+1):
+        for i in range(y*16, (y+1)*16):
+          siz = new_demand[i].size
+          distancc = new_demand[i].distance
+          grouu = siz + ' ' + distancc
+          for veh, liss in new_demand[i].met_by.items():
+            new_group[grouu][veh] = liss[0]
+      
+      for y in range(y_start+1, 16):
+        for i in range(y*16, (y+1)*16):
+          new_demand[i].met_by = {}
+      
+      return new_demand, new_fleet, new_group, new_group2
     
-    st.write("Optimizing Solution and Reducing Costs...")
-    time.sleep(1)
+    demand = []
+    for i in range(len(demand_df)):
+      demand_year = demand_df['Year'][i]
+      demand_size = demand_df['Size'][i]
+      demand_distance = demand_df['Distance'][i]
+      demand_demand = demand_df['Demand (km)'][i]
+      demand.append(Demand(demand_year, demand_size, demand_distance, demand_demand))
+    fleet = {}
+    groups = []
+    group2 = {}
+
+    for x in range(16):##############################################################################################################
+      print(x)
+      demand, fleet, group, group2 = copy.deepcopy(weiping(x, demand, fleet, groups, group2))
+      my_bar.progress((x+1)/16, text=progress_text)
+      groups.append(group)
+      for i in range(x*16, (x+1)*16):
+          print(demand[i].met_by)
+
+    progress_text_2  = "Optimizing Solution and Reducing Costs..."
+    my_bar_2 = st.progress(0, text=progress_text_2)
+    
+    categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
+    def calc_group_costs10(catt, process):
+      categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
+      inx = categories.index(catt)
+      factor = [102000, 106000, 73000, 118000]
+      factory = factor[int(catt[1])-1]
+      total_costs = 0
+      for p in range(len(process)):
+        year = p+2023
+        demand_index = p*16+inx
+        amount = demand[demand_index]._demand
+        min_rate = {}
+        for veh, quant in process[p].items():
+          if int(veh[-4:]) == year:
+            total_costs += Vehicles[veh].cost*quant # buy costs
+          total_costs += Vehicles[veh].get_insurance_cost(year)*quant # insurance costs
+          total_costs += Vehicles[veh].get_maintenance_cost(year)*quant # maintenance costs
+          
+          fuel_consumption = 0
+          rate = 0
+          f = ''
+          if veh[:3] == 'BEV':
+            rate = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+            f = 'Electricity'
+          elif veh[:3] == 'LNG':
+            rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+            fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+            rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+            fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+            rates = [rate1, rate2]
+            fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+            fs = ['LNG', 'BioLNG']
+            multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+            rate = rates[multi.index(min(multi))]
+            fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+            f = fs[multi.index(min(multi))]
+          elif veh[:3] == 'Die':
+            rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+            fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+            rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+            fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+            rates = [rate1, rate2]
+            fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+            fs = ['B20', 'HVO']
+            multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+            rate = rates[multi.index(min(multi))]
+            fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+            f = fs[multi.index(min(multi))]
+          valuee = rate*fuel_consumption+(float(veh[-2:])*0.000000001)
+          min_rate[valuee] = [veh, f, rate*fuel_consumption, quant]
+            
+        while True:
+          veh = min_rate[min(min_rate.keys())][0]
+          f = min_rate[min(min_rate.keys())][1]
+          rater = min_rate[min(min_rate.keys())][2]
+          quan = min_rate[min(min_rate.keys())][3]
+          del min_rate[min(min_rate.keys())]
+          if len(min_rate) == 0:
+            total_costs += rater*amount # fuel costs
+            break
+          else:
+            total_costs += rater*factory*quan # fuel costs
+            amount -= factory*quan
+            
+        if year == 2038:
+          for veh, quant in process[p].items():
+              total_costs -= Vehicles[veh].get_resale(year)*quant # sell costs
+        else:
+          for veh, quant in process[p].items():
+            if veh in process[p+1].keys():
+              if process[p+1][veh] != quant:
+                diff = np.abs(process[p+1][veh] - quant)
+                total_costs -= Vehicles[veh].get_resale(year)*diff # sell costs
+              else:
+                total_costs -= Vehicles[veh].get_resale(year)*quant # sell costs
+      return total_costs
+
+    def selling_gain(catt, y_ear): #get an extra sell in a year, what is max decrease in costs
+      categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
+      c = categories.index(catt)
+      factor = [102000, 106000, 73000, 118000]
+      factory = factor[int(catt[1])-1]
+      process = []
+      for g in range(len(groups)):
+        process.append(groups[g][catt])
+      orig_cos = calc_group_costs10(catt, process)
+      category = []
+      years = 2022
+      for gro in groups:
+        years += 1
+        for veh, quant in gro[categories[c]].items():
+          if int(veh[-4:]) == years:
+            for _ in range(quant):
+              category = category + [{veh:[]}]
+      for y in range(16):
+        for i in range(y*16, (y+1)*16):
+          if i%16 == c:
+            vehicles_used = copy.deepcopy(demand[i].met_by)
+            for veh, lissst in vehicles_used.items():
+              indx = next((category.index(x) for x in category if veh in x.keys()), 'ok')
+              for k in range(lissst[0]):
+                category[k+indx][veh].append(lissst[2])
+      size = categories[c][:2]
+      distance = categories[c][3:]
+      max_dec = {}
+      for V in category:
+        for veh, uses in V.items():
+          if int(veh[-4:]) <= y_ear and int(veh[-4:])+len(uses)-1 > y_ear:
+            cat_to_comp = copy.deepcopy(category)
+            cat_to_comp.remove(V)
+            split_ind = y_ear - int(veh[-4:]) + 1
+            year1 = int(veh[-4:])
+            uses1 = uses[:split_ind]
+            year2 = year1+split_ind
+            uses2 = uses[split_ind:]
+            por_phys = [0.16, 0.35, 0.57, 0.82, 1.1, 1.41, 1.75, 2.02, 2.32, 2.65]
+            
+            potential_vehicles1 = []
+            if int(distance[1]) == 2 and year1 < 2026:
+              potential_vehicles1 = ['LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+            elif int(distance[1]) == 3 and year1 < 2029:
+              potential_vehicles1 = ['LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+            elif int(distance[1]) == 4 and year1 < 2032:
+              potential_vehicles1 = ['LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+            else:
+              potential_vehicles1 = ['BEV_'+size+'_'+str(year1), 'LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+            costs1 = {}
+            for veh in potential_vehicles1:
+              phys_costs = por_phys[len(uses1)-1]*Vehicles[veh].cost
+              fuel_consumption = 0
+              
+              fuel_costs = 0
+              for u in range(len(uses1)):
+                yearu = year1+u
+                rate = 0
+                f = ''
+                if veh[:3] == 'BEV':
+                  rate = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                  f = 'Electricity'
+                elif veh[:3] == 'LNG':
+                  rate1 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rate2 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rates = [rate1, rate2]
+                  fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                  fs = ['LNG', 'BioLNG']
+                  multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                  rate = rates[multi.index(min(multi))]
+                  fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                  f = fs[multi.index(min(multi))]
+                elif veh[:3] == 'Die':
+                  rate1 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rate2 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rates = [rate1, rate2]
+                  fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                  fs = ['B20', 'HVO']
+                  multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                  rate = rates[multi.index(min(multi))]
+                  fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                  f = fs[multi.index(min(multi))]
+                fuel_costs += rate*fuel_consumption*uses1[u]
+              costs1[phys_costs+fuel_costs] = veh
+            cat_to_comp.append({costs1[min(costs1.keys())]:uses1})
+            
+            potential_vehicles2 = []
+            if int(distance[1]) == 2 and year2 < 2026:
+              potential_vehicles2 = ['LNG_'+size+'_'+str(year2), 'Diesel_'+size+'_'+str(year2)]
+            elif int(distance[1]) == 3 and year2 < 2029:
+              potential_vehicles2 = ['LNG_'+size+'_'+str(year2), 'Diesel_'+size+'_'+str(year2)]
+            elif int(distance[1]) == 4 and year2 < 2032:
+              potential_vehicles2 = ['LNG_'+size+'_'+str(year2), 'Diesel_'+size+'_'+str(year2)]
+            else:
+              potential_vehicles2 = ['BEV_'+size+'_'+str(year2), 'LNG_'+size+'_'+str(year2), 'Diesel_'+size+'_'+str(year2)]
+            costs2 = {}
+            for veh in potential_vehicles2:
+              phys_costs = por_phys[len(uses2)-1]*Vehicles[veh].cost
+              fuel_consumption = 0
+              fuel_costs = 0
+              for u in range(len(uses2)):
+                yearu = year2+u
+                rate = 0
+                f = ''
+                if veh[:3] == 'BEV':
+                  rate = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                  f = 'Electricity'
+                elif veh[:3] == 'LNG':
+                  rate1 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rate2 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rates = [rate1, rate2]
+                  fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                  fs = ['LNG', 'BioLNG']
+                  multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                  rate = rates[multi.index(min(multi))]
+                  fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                  f = fs[multi.index(min(multi))]
+                elif veh[:3] == 'Die':
+                  rate1 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rate2 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                  fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                  rates = [rate1, rate2]
+                  fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                  fs = ['B20', 'HVO']
+                  multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                  rate = rates[multi.index(min(multi))]
+                  fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                  f = fs[multi.index(min(multi))]
+                fuel_costs += rate*fuel_consumption*uses2[u]
+              costs2[phys_costs+fuel_costs] = veh
+            cat_to_comp.append({costs2[min(costs2.keys())]:uses2})
+            compressed = [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}]
+            for y in range(16):
+              for B in cat_to_comp:
+                for beh, bses in B.items():
+                  yeart = int(beh[-4:])-2023
+                  if yeart <= y and yeart+len(bses)-1 >= y:
+                    if beh in compressed[y].keys():
+                      compressed[y][beh] += 1
+                    else:
+                      compressed[y][beh] = 1
+            max_dec[orig_cos-calc_group_costs10(catt, compressed)] = compressed
+      if len(max_dec) == 0:
+        return 0, None
+      #print(max_dec[max(max_dec.keys())])
+      return max(max_dec.keys()), max_dec[max(max_dec.keys())]
+
+    def selling_loss(catt, y_ear): #have to get rid of a sell, what is min increase in costs
+      categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
+      c = categories.index(catt)
+      factor = [102000, 106000, 73000, 118000]
+      factory = factor[int(catt[1])-1]
+      process = []
+      for g in range(len(groups)):
+        process.append(groups[g][catt])
+      orig_cos = calc_group_costs10(catt, process)
+      category = []
+      years = 2022
+      for gro in groups:
+        years += 1
+        for veh, quant in gro[categories[c]].items():
+          if int(veh[-4:]) == years:
+            for _ in range(quant):
+              category = category + [{veh:[]}]
+      for y in range(16):
+        for i in range(y*16, (y+1)*16):
+          if i%16 == c:
+            vehicles_used = copy.deepcopy(demand[i].met_by)
+            for veh, lissst in vehicles_used.items():
+              indx = next((category.index(x) for x in category if veh in x.keys()), 'ok')
+              for k in range(lissst[0]):
+                category[k+indx][veh].append(lissst[2])
+      size = categories[c][:2]
+      distance = categories[c][3:]
+      min_inc = {}
+      for V in category:
+        for veh, uses in V.items():
+          if int(veh[-4:])+len(uses)-1 == y_ear:
+            for B in category:
+              for beh, bses in B.items():
+                if int(beh[-4:]) == y_ear+1 and len(bses) <= 10-len(uses):
+                  cat_to_comp = copy.deepcopy(category)
+                  cat_to_comp.remove(V)
+                  cat_to_comp.remove(B)
+                  year1 = int(veh[-4:])
+                  uses1 = uses + bses
+                  por_phys = [0.16, 0.35, 0.57, 0.82, 1.1, 1.41, 1.75, 2.02, 2.32, 2.65]
+                  potential_vehicles1 = []
+                  if int(distance[1]) == 2 and year1 < 2026:
+                    potential_vehicles1 = ['LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+                  elif int(distance[1]) == 3 and year1 < 2029:
+                    potential_vehicles1 = ['LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+                  elif int(distance[1]) == 4 and year1 < 2032:
+                    potential_vehicles1 = ['LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+                  else:
+                    potential_vehicles1 = ['BEV_'+size+'_'+str(year1), 'LNG_'+size+'_'+str(year1), 'Diesel_'+size+'_'+str(year1)]
+                  costs1 = {}
+                  for veh in potential_vehicles1:
+                    phys_costs = por_phys[len(uses1)-1]*Vehicles[veh].cost
+                    fuel_consumption = 0
+                    if veh[:3] == 'BEV':
+                      fuel_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='Electricity']['Consumption (unit_fuel/km)'].tolist()[0]
+                    elif veh[:3] == 'LNG':
+                      fuel_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                    elif veh[:3] == 'Die':
+                      fuel_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+
+                    fuel_costs = 0
+                    for u in range(len(uses1)):
+                      yearu = year1+u
+                      rate = 0
+                      f = ''
+                      if veh[:3] == 'BEV':
+                        rate = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                        f = 'Electricity'
+                      elif veh[:3] == 'LNG':
+                        rate1 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                        rate2 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                        rates = [rate1, rate2]
+                        fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                        fs = ['LNG', 'BioLNG']
+                        multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                        rate = rates[multi.index(min(multi))]
+                        fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                        f = fs[multi.index(min(multi))]
+                      elif veh[:3] == 'Die':
+                        rate1 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                        rate2 = fuels_df.loc[fuels_df['Year'] == yearu].loc[fuels_df.loc[fuels_df['Year'] == yearu]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                        fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                        rates = [rate1, rate2]
+                        fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                        fs = ['B20', 'HVO']
+                        multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                        rate = rates[multi.index(min(multi))]
+                        fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                        f = fs[multi.index(min(multi))]
+                      fuel_costs += rate*fuel_consumption*uses1[u]
+                    costs1[phys_costs+fuel_costs] = veh
+                  cat_to_comp.append({costs1[min(costs1.keys())]:uses1})
+                  compressed = [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}]
+                  for y in range(16):
+                    for P in cat_to_comp:
+                      for peh, pses in P.items():
+                        yeart = int(peh[-4:])-2023
+                        if yeart <= y and yeart+len(pses)-1 >= y:
+                          if peh in compressed[y].keys():
+                            compressed[y][peh] += 1
+                          else:
+                            compressed[y][peh] = 1
+                  min_inc[calc_group_costs10(catt, compressed)-orig_cos] = compressed
+      if len(min_inc) == 0:
+        return 999999999999999, None
+      return min(min_inc.keys()), min_inc[min(min_inc.keys())]
+
+    categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
+    loops = 7
+    for mm in range(loops):  
+      for y in range(0, 15):
+        yeary = y+2023
+        increases = {}
+        decreases = {}
+        for c in range(len(categories)):
+          amount, compr = selling_loss(categories[c], yeary)
+          if amount != 999999999999999:
+            increases[amount+random.random()*0.000000001] = [copy.deepcopy(compr), c]
+          amount, compr = selling_gain(categories[c], yeary)
+          if amount != 0:
+            decreases[amount+random.random()*0.000000001] = [copy.deepcopy(compr), c]
+        print(y)
+        while True:
+          flag = False
+          temp_key = None
+          temp_val = None
+          if max(decreases.keys()) > min(increases.keys()) and decreases[max(decreases.keys())][1] == increases[min(increases.keys())][1]:
+            flag = True
+            #temp_key = copy.deepcopy(min(increases.keys()))
+            #temp_val = copy.deepcopy(increases[min(increases.keys())])
+            del increases[min(increases.keys())]
+          if max(decreases.keys()) > min(increases.keys()):
+            for m in range(16):
+              year = m+2023
+              groups[m][categories[decreases[max(decreases.keys())][1]]] = decreases[max(decreases.keys())][0][m]
+              groups[m][categories[increases[min(increases.keys())][1]]] = increases[min(increases.keys())][0][m]
+              for j in range(m*16, (m+1)*16):
+                if j%16 == decreases[max(decreases.keys())][1]:
+                  size = categories[decreases[max(decreases.keys())][1]][:2]
+                  distance = categories[decreases[max(decreases.keys())][1]][3:]
+                  factor = [102000, 106000, 73000, 118000]
+                  factory = factor[int(size[1])-1]
+                  min_rate = {}
+                  for veh, quant in decreases[max(decreases.keys())][0][m].items():
+                    fuel_consumption = 0
+                    rate = 0
+                    f = ''
+                    if veh[:3] == 'BEV':
+                      rate = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                      f = 'Electricity'
+                    elif veh[:3] == 'LNG':
+                      rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rates = [rate1, rate2]
+                      fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                      fs = ['LNG', 'BioLNG']
+                      multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                      rate = rates[multi.index(min(multi))]
+                      fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                      f = fs[multi.index(min(multi))]
+                    elif veh[:3] == 'Die':
+                      rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rates = [rate1, rate2]
+                      fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                      fs = ['B20', 'HVO']
+                      multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                      rate = rates[multi.index(min(multi))]
+                      fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                      f = fs[multi.index(min(multi))]
+                    valuee = rate*fuel_consumption+(float(veh[-2:])*0.000000001)
+                    min_rate[valuee] = [veh, f, quant]
+                  dem = demand[j]._demand
+                  demand[j].met_by = {}
+                  while True:
+                    veh = min_rate[min(min_rate.keys())][0]
+                    f = min_rate[min(min_rate.keys())][1]
+                    quan = min_rate[min(min_rate.keys())][2]
+                    del min_rate[min(min_rate.keys())]
+                    if len(min_rate) == 0:
+                      demand[j].add_vehicle(veh, quan, f, dem/quan+0.000000001)
+                      break
+                    else:
+                      demand[j].add_vehicle(veh, quan, f, factory)
+                      dem -= factory*quan
+                if j%16 == increases[min(increases.keys())][1]:
+                  size = categories[increases[min(increases.keys())][1]][:2]
+                  distance = categories[increases[min(increases.keys())][1]][3:]
+                  factor = [102000, 106000, 73000, 118000]
+                  factory = factor[int(size[1])-1]
+                  min_rate = {}
+                  for veh, quant in increases[min(increases.keys())][0][m].items():
+                    fuel_consumption = 0
+                    rate = 0
+                    f = ''
+                    if veh[:3] == 'BEV':
+                      rate = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='Electricity']['Cost ($/unit_fuel)'].tolist()[0]
+                      f = 'Electricity'
+                    elif veh[:3] == 'LNG':
+                      rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='LNG']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='LNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='BioLNG']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rates = [rate1, rate2]
+                      fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                      fs = ['LNG', 'BioLNG']
+                      multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                      rate = rates[multi.index(min(multi))]
+                      fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                      f = fs[multi.index(min(multi))]
+                    elif veh[:3] == 'Die':
+                      rate1 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='B20']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption1 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='B20']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rate2 = fuels_df.loc[fuels_df['Year'] == year].loc[fuels_df.loc[fuels_df['Year'] == year]['Fuel']=='HVO']['Cost ($/unit_fuel)'].tolist()[0]
+                      fuel_consumption2 = vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID']==veh]['Fuel']=='HVO']['Consumption (unit_fuel/km)'].tolist()[0]
+                      rates = [rate1, rate2]
+                      fuel_consumptions = [fuel_consumption1, fuel_consumption2]
+                      fs = ['B20', 'HVO']
+                      multi = [rate1*fuel_consumption1, rate2*fuel_consumption2]
+                      rate = rates[multi.index(min(multi))]
+                      fuel_consumption = fuel_consumptions[multi.index(min(multi))]
+                      f = fs[multi.index(min(multi))]
+                    valuee = rate*fuel_consumption+(float(veh[-2:])*0.000000001)
+                    min_rate[valuee] = [veh, f, quant]
+                  dem = demand[j]._demand
+                  demand[j].met_by = {}
+                  while True:
+                    veh = min_rate[min(min_rate.keys())][0]
+                    f = min_rate[min(min_rate.keys())][1]
+                    quan = min_rate[min(min_rate.keys())][2]
+                    del min_rate[min(min_rate.keys())]
+                    if len(min_rate) == 0:
+                      demand[j].add_vehicle(veh, quan, f, dem/quan+0.000000001)
+                      break
+                    else:
+                      demand[j].add_vehicle(veh, quan, f, factory)
+                      dem -= factory*quan
+            cd = decreases[max(decreases.keys())][1]
+            ci = increases[min(increases.keys())][1]
+            print(categories[ci], categories[cd], min(increases.keys()) - max(decreases.keys()))
+            del decreases[max(decreases.keys())]
+            del increases[min(increases.keys())]
+            amount, compr = selling_loss(categories[ci], yeary)
+            if amount != 999999999999999:
+              increases[amount+random.random()*0.000000001] = [copy.deepcopy(compr), ci]
+            
+            holder = -12341234
+            for amound, freak in decreases.items():
+              if freak[1] == ci:
+                holder = amound
+            if holder != -12341234:
+              del decreases[holder]
+            amount, compr = selling_gain(categories[ci], yeary)
+            if amount != 0:
+              decreases[amount+random.random()*0.000000001] = [copy.deepcopy(compr), ci]
+            
+            amount, compr = selling_gain(categories[cd], yeary)
+            if amount != 0:
+              decreases[amount+random.random()*0.000000001] = [copy.deepcopy(compr), cd]
+            
+            holder = -123412345
+            for amound, freak in increases.items():
+              if freak[1] == cd:
+                holder = amound
+            if holder != -123412345:
+              del increases[holder]
+            amount, compr = selling_loss(categories[cd], yeary)
+            if amount != 999999999999999:
+              increases[amount+random.random()*0.000000001] = [copy.deepcopy(compr), cd]
+            #if flag:
+            #  increases[temp_key] = temp_val
+              
+          else:
+            break
+        my_bar_2.progress((mm*16+y+1)/(loops*16-1), text=progress_text_2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    new_demand = copy.deepcopy(demand)
+    solution = pd.DataFrame(columns = ['Year', 'ID', 'Num_Vehicles', 'Type', 'Fuel', 'Distance_bucket', 'Distance_per_vehicle(km)'])
+    sleet = {}
+    for i in range(len(new_demand)):
+      year = math.floor(i/16)+2023
+      for veh, lit in new_demand[i].met_by.items():
+        if int(veh[-4:]) == year:
+          if veh in sleet:
+            sleet[veh] += lit[0]
+            solution.loc[solution['ID'] == veh, ['Num_Vehicles']] += lit[0]
+          else:
+            sleet[veh] = lit[0]
+            solution.loc[len(solution.index)] = [year, veh, lit[0], 'Buy', np.nan, np.nan, '0']
+
+    sheet = {}
+    jay = []
+    for y in range(16):
+      cou = 0
+      sleet_prior = copy.deepcopy(sheet)
+      sheet = {}
+      for i in range(y*16, (y+1)*16):
+        for veh, lit in new_demand[i].met_by.items():
+          if veh in sheet:
+            sheet[veh] += lit[0]
+          else:
+            sheet[veh] = lit[0]
+      if y >= 1:
+        for veh_ID, quant in sleet_prior.items():
+          if veh_ID in sheet.keys():
+            diff = sleet_prior[veh_ID] - sheet[veh_ID]
+            if diff > 0:
+              solution.loc[len(solution.index)] = [y+2023-1, veh_ID, diff, 'Sell', np.nan, np.nan, '0']
+              cou += diff
+          else:
+            solution.loc[len(solution.index)] = [y+2023-1, veh_ID, sleet_prior[veh_ID], 'Sell', np.nan, np.nan, '0']
+            cou += sleet_prior[veh_ID]
+      jay.append(cou)
+        
+        
+    for i in range(len(new_demand)):
+      year = new_demand[i].year
+      for veh, lits in new_demand[i].met_by.items():
+        solution.loc[len(solution.index)] = [year, veh, lits[0], 'Use', lits[1], new_demand[i].distance, lits[2]]
+        
+    st.session_state['submission'] = solution.sort_values(['Year', 'Type', 'Distance_bucket'], kind='quicksort')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     st.write("Reducing Carbon Emissions...")
     time.sleep(1)
-    st.session_state['submission'] = pd.read_csv('dataset/sample_submission.csv')
+    
     status.update(label="Solution complete!", state='complete', expanded=True)
     time.sleep(1)
-
+  end_time = time.time()
+  elapsed_time = end_time - start_time
+  minutes = elapsed_time//60
+  seconds = elapsed_time%60
+  col2.markdown('Elapsed Time to Solution: %d minutes %.1f seconds' % (minutes, seconds))
 
 if 'demand' in st.session_state:
   placeholder2 = col2.empty()
@@ -152,6 +1559,7 @@ if 'demand' in st.session_state:
     if st.session_state['demand'].equals(st.session_state['original_demand']):
       if placeholder.button("Use a sample solution to default demand", key = 't2'):
         st.session_state['submission'] = pd.read_csv('dataset/sample_submission.csv')
+        sol_fun()
         st.rerun()
   if 'submission' in st.session_state:
     placeholder.empty()

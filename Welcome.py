@@ -49,7 +49,7 @@ st.pyplot(fig)
 st.write(':white_check_mark: Input your demand!')
 st.write(':white_check_mark: Confirm your emission goals!')
 st.write(':white_check_mark: Solve for your optimal fleet!')
-st.write(':white_check_mark: View statistics of your new solution!')
+st.write(':white_check_mark: View analytics of your new solution!')
 
-if st.button('Start your journey here!'):
+if st.button('Start your journey here!', type='primary'):
   st.switch_page("pages/1_Demand.py")

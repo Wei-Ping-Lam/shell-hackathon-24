@@ -51,5 +51,5 @@ if 'demand' in st.session_state:
       st.session_state['demand'] = st.session_state['original_demand']
       st.rerun()
   
-  if st.button('Go to Fleet Optimizer'):
+  if st.button('Go to Fleet Optimizer', type='primary'):
     st.switch_page("pages/2_Fleet Optimizer.py")

@@ -17,17 +17,12 @@ if 'original_carbon_emissions' not in st.session_state:
   st.session_state['original_carbon_emissions'] = pd.read_csv('./dataset/carbon_emissions.csv')
 
 col4, col5, col6 = col1.columns([1, 2, 1])
-carbon_emissions_df = col5.data_editor(
-  st.session_state['carbon_emissions'], 
-  column_config = {"Carbon": st.column_config.NumberColumn("Carbon emission CO2/kg", min_value = 0, step = 1, format = "%d")},
-  use_container_width = False, hide_index = True, disabled=("Year"), width = 300, height = 600)
+carbon_emissions_df = col5.data_editor(st.session_state['carbon_emissions'], column_config = {"Carbon": st.column_config.NumberColumn("Carbon emission CO2/kg", min_value = 0, step = 1, format = "%d")}, use_container_width = False, hide_index = True, disabled=["Year"], width = 300, height = 600)
 if not st.session_state['carbon_emissions'].equals(carbon_emissions_df):
     st.session_state['carbon_emissions'] = carbon_emissions_df
     st.rerun()
 if not st.session_state['carbon_emissions'].equals(st.session_state['original_carbon_emissions']):
-  st.session_state['changedE'] = True
   if col5.button('Reset to default'):
-    st.session_state['changedE'] = False
     st.session_state['carbon_emissions'] = st.session_state['original_carbon_emissions']
     st.rerun()
 
