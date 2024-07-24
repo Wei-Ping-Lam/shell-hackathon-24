@@ -939,8 +939,9 @@ def main_fun(loops, quicks, alphaa, betaa):
       demand, fleet, group, groups = copy.deepcopy(weiping(0, demand, fleet, groups, group2, True, alphaa, betaa))
       my_bar.progress(1.0, text=progress_text)
 
-    progress_text_2  = "Optimizing Solution and Reducing Costs...)"
-    my_bar_2 = st.progress(0, text=progress_text_2)
+    if loops != 0:
+      progress_text_2  = "Optimizing Solution and Reducing Costs..."
+      my_bar_2 = st.progress(0, text=progress_text_2)
     
 
     categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
