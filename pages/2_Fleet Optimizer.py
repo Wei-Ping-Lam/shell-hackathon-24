@@ -929,12 +929,12 @@ def main_fun(loops, quicks, alphaa, betaa):
 
     if not quicks:
       for x in range(16):##############################################################################################################
-        print(x)
+        #print(x)
         demand, fleet, group, group2 = copy.deepcopy(weiping(x, demand, fleet, groups, group2, False, alphaa, betaa))
         my_bar.progress((x+1)/16, text=progress_text)
         groups.append(group)
         for i in range(x*16, (x+1)*16):
-          print(demand[i].met_by)
+          #print(demand[i].met_by)
     else:
       demand, fleet, group, groups = copy.deepcopy(weiping(0, demand, fleet, groups, group2, True, alphaa, betaa))
       my_bar.progress(1.0, text=progress_text)
@@ -1297,7 +1297,7 @@ def main_fun(loops, quicks, alphaa, betaa):
           amount, compr = selling_gain(categories[c], yeary)
           if amount != 0:
             decreases[amount+random.random()*0.000000001] = [copy.deepcopy(compr), c]
-        print(y)
+        #print(y)
         while True:
           flag = False
           temp_key = None
@@ -1421,7 +1421,7 @@ def main_fun(loops, quicks, alphaa, betaa):
                       dem -= factory*quan
             cd = decreases[max(decreases.keys())][1]
             ci = increases[min(increases.keys())][1]
-            print(categories[ci], categories[cd], min(increases.keys()) - max(decreases.keys()))
+            #print(categories[ci], categories[cd], min(increases.keys()) - max(decreases.keys()))
             del decreases[max(decreases.keys())]
             del increases[min(increases.keys())]
             amount, compr = selling_loss(categories[ci], yeary)
