@@ -32,5 +32,5 @@ if 'sell_percent' not in st.session_state:
 def store_value():
   st.session_state["sell_percent"] = st.session_state["_sell_percent"]
 
-hi = st.number_input(" s", min_value=0.0, max_value=100.0, value = st.session_state["sell_percent"], key = '_sell_percent', label_visibility = 'hidden', on_change=store_value)
+hi = st.number_input(" s", min_value=20.0, max_value=100.0, value = st.session_state["sell_percent"], key = '_sell_percent', label_visibility = 'hidden', on_change=store_value)
 st.markdown('Every year at most %g%% of the vehicles in the existing fleet can be sold. (default 20%%)' % hi)
