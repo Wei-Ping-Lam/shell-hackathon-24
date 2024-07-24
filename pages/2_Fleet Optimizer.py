@@ -933,7 +933,7 @@ def main_fun(loops, quicks, alphaa, betaa):
         demand, fleet, group, group2 = copy.deepcopy(weiping(x, demand, fleet, groups, group2, False, alphaa, betaa))
         my_bar.progress((x+1)/16, text=progress_text)
         groups.append(group)
-        for i in range(x*16, (x+1)*16):
+        #for i in range(x*16, (x+1)*16):
           #print(demand[i].met_by)
     else:
       demand, fleet, group, groups = copy.deepcopy(weiping(0, demand, fleet, groups, group2, True, alphaa, betaa))
