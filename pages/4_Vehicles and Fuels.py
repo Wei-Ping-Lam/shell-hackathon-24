@@ -31,7 +31,7 @@ if not st.session_state['vehicles'].equals(st.session_state['original_vehicles']
     st.rerun()
 
 new_vehicles = col1.file_uploader("Replace Vehicles data", type = '.csv', key = 'delme')
-col1.download_button("Download Vehicles Template", pd.read_csv('./dataset/vehicles_template.csv').to_csv(index=False), 'vehicles_template.csv')
+col1.download_button("Download Vehicles Template", pd.read_csv('./templates/vehicles_template.csv').to_csv(index=False), 'vehicles_template.csv')
 if new_vehicles is not None:
   st.session_state['vehicles'] = pd.read_csv(new_vehicles)
   del st.session_state['delme']
@@ -56,7 +56,7 @@ if not st.session_state['fuels'].equals(st.session_state['original_fuels']):
     st.rerun()
 
 new_fuels = col2.file_uploader("Replace Fuels data", type = '.csv', key = 'delme2')
-col2.download_button("Download Fuels Template", pd.read_csv('./dataset/fuels_template.csv').to_csv(index=False), 'fuels_template.csv')
+col2.download_button("Download Fuels Template", pd.read_csv('./templates/fuels_template.csv').to_csv(index=False), 'fuels_template.csv')
 if new_fuels is not None:
   st.session_state['fuels'] = pd.read_csv(new_fuels)
   del st.session_state['delme2']
@@ -81,7 +81,7 @@ if not st.session_state['vehicles_fuels'].equals(st.session_state['original_vehi
     st.rerun()
 
 new_vehicles_fuels = col3.file_uploader("Replace Vehicle Fuels data", type = '.csv', key = 'delme3')
-col3.download_button("Download Vehicle Fuels Template", pd.read_csv('./dataset/vehicles_fuels_template.csv').to_csv(index=False), 'vehicles_fuels_template.csv')
+col3.download_button("Download Vehicle Fuels Template", pd.read_csv('./templates/vehicles_fuels_template.csv').to_csv(index=False), 'vehicles_fuels_template.csv')
 if new_vehicles_fuels is not None:
   st.session_state['vehicles_fuels'] = pd.read_csv(new_vehicles_fuels)
   del st.session_state['delme3']

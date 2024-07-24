@@ -16,7 +16,7 @@ if 'demand' not in st.session_state:
   st.header("Input your demand")
   st.markdown("For each year (2023-2038), there should be 16 inputs. Each 4 vehicle sizes should be included in each 4 distance buckets.")
   demanded = st.file_uploader("Choose a CSV file", type = '.csv')
-  st.download_button("Download Demand Template", pd.read_csv('./dataset/demand_template.csv').to_csv(index=False), 'demand_template.csv')
+  st.download_button("Download Demand Template", pd.read_csv('./templates/demand_template.csv').to_csv(index=False), 'demand_template.csv')
   if st.button("Use default demand data"):
     demand_df = pd.read_csv('./dataset/demand.csv')
     st.session_state['original_demand'] = demand_df
