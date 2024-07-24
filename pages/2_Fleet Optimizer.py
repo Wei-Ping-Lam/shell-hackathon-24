@@ -39,11 +39,16 @@ def sol_fun():
   st.session_state['sol_fuels'] = st.session_state['fuels']
   st.session_state['sol_vehicles'] = st.session_state['vehicles']
   st.session_state['sol_sell_percent'] = st.session_state['sell_percent']
+  st.session_state['sol_alpha'] = st.session_state['alpha']
+  st.session_state['sol_beta'] = st.session_state['beta']
 
-def main_fun(loops):
+def main_fun(loops, quicks, alphaa, betaa):
   start_time = time.time()
   with col2.status("Optimizing... (do not leave page)", expanded=True) as status:
-    progress_text = "Creating Strong Initial Solution..."
+    if not quicks:
+      progress_text = "Creating Strong Initial Solution..."
+    else:
+      progress_text = "Creating Initial Solution..."
     my_bar = st.progress(0, text=progress_text)
 
     sol_fun()
@@ -126,7 +131,7 @@ def main_fun(loops):
       demand_demand = demand_df['Demand (km)'][i]
       demand.append(Demand(demand_year, demand_size, demand_distance, demand_demand))
 
-    def weiping(y_start, demanz, fleez, grups, grup2):
+    def weiping(y_start, demanz, fleez, grups, grup2, quick, alpha, beta):
       demand = copy.deepcopy(demanz)
       fleet = copy.deepcopy(fleez)
       groups = copy.deepcopy(grups)
@@ -135,9 +140,6 @@ def main_fun(loops):
         group = {"S1 D1": {}, "S1 D2": {}, "S1 D3": {}, "S1 D4": {}, "S2 D1": {}, "S2 D2": {}, "S2 D3": {}, "S2 D4": {}, "S3 D1": {}, "S3 D2": {}, "S3 D3": {}, "S3 D4": {}, "S4 D1": {}, "S4 D2": {}, "S4 D3": {}, "S4 D4": {},}
       else:
         group = copy.deepcopy(grup2)
-      
-      alpha = 0.20
-      beta = 11
 
       maininscost = []
       for i in range(6, 7+beta*10, beta):
@@ -750,6 +752,12 @@ def main_fun(loops):
                 group[candid][highest] -= sell_num
                 break
             break
+
+
+      if quick:
+        return demand, fleet, group, groups
+
+
       categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
 
       new_demand = []
@@ -919,13 +927,17 @@ def main_fun(loops):
     groups = []
     group2 = {}
 
-    for x in range(16):##############################################################################################################
-      print(x)
-      demand, fleet, group, group2 = copy.deepcopy(weiping(x, demand, fleet, groups, group2))
-      my_bar.progress((x+1)/16, text=progress_text)
-      groups.append(group)
-      for i in range(x*16, (x+1)*16):
+    if not quicks:
+      for x in range(16):##############################################################################################################
+        print(x)
+        demand, fleet, group, group2 = copy.deepcopy(weiping(x, demand, fleet, groups, group2, False, alphaa, betaa))
+        my_bar.progress((x+1)/16, text=progress_text)
+        groups.append(group)
+        for i in range(x*16, (x+1)*16):
           print(demand[i].met_by)
+    else:
+      demand, fleet, group, groups = copy.deepcopy(weiping(0, demand, fleet, groups, group2, True, alphaa, betaa))
+      my_bar.progress(1.0, text=progress_text)
 
     progress_text_2  = "Optimizing Solution and Reducing Costs...)"
     my_bar_2 = st.progress(0, text=progress_text_2)
@@ -1635,35 +1647,50 @@ def main_fun(loops):
   col2.markdown('Elapsed Time to Solution: %d minutes %.1f seconds' % (minutes, seconds))
 
 if 'demand' in st.session_state:
-  l1, l2 = col2.columns([1, 1])
+  st.session_state['alpha'] = col2.slider("Alpha: parameter affecting the timeliness of selling 2023 cars", min_value=0.2, max_value=1.0, value = 0.2, step = 0.01, format='%.2f')
+  st.session_state['beta'] = col2.slider("Beta: parameter describing weight of insurance/maintenance costs on selling scheme", min_value=3, max_value=20, value = 11, step = 1, format='%.1f')
+  l1, l2, l3 = col2.columns([1, 1, 1])
   placeholder2 = l1.empty()
   placeholder9 = l2.empty()
+  placeholder7 = l3.empty()
   placeholder8 = col2.empty()
   placeholder = col2.empty()
   if not 'submission' in st.session_state:
-    if placeholder2.button("Optimize Fleet! (~3 hours)", type='primary', use_container_width =True, key='p1'):
+    if placeholder2.button("Optimize Fleet! (~2.5 hours)", type='primary', use_container_width =True, key='p1'):
       placeholder2.empty()
       placeholder9.empty()
+      placeholder7.empty()
       if placeholder8.button('Stop'):
         st.stop()
         st.rerun()
-      main_fun(6)
+      main_fun(6, False, st.session_state['alpha'], st.session_state['beta'])
     if placeholder9.button("Find Quick Solution! (~5 minutes)", type='primary', use_container_width =True, key='p9'):
       placeholder2.empty()
       placeholder9.empty()
+      placeholder7.empty()
       if placeholder8.button('Stop'):
         st.stop()
         st.rerun()
-      main_fun(0)
+      main_fun(0, False, st.session_state['alpha'], st.session_state['beta'])
+    if placeholder7.button("Find Quicker Solution! (~5 seconds)", type='primary', use_container_width =True, key='u7'):
+      placeholder2.empty()
+      placeholder9.empty()
+      placeholder7.empty()
+      if placeholder8.button('Stop'):
+        st.stop()
+        st.rerun()
+      main_fun(0, True, st.session_state['alpha'], st.session_state['beta'])
     if st.session_state['demand'].equals(st.session_state['original_demand']):
       if placeholder.button("Use a sample solution to default demand", key = 't2'):
         st.session_state['submission'] = pd.read_csv('dataset/sample_submission.csv')
         sol_fun()
         st.rerun()
   if 'submission' in st.session_state:
+
     placeholder.empty()
     placeholder2.empty()
     placeholder8.empty()
+    placeholder7.empty()
     placeholder9.empty()
     kol1, kol2, kol3 = st.columns([1, 3, 1])
 
@@ -1674,14 +1701,17 @@ if 'demand' in st.session_state:
     flag5 = st.session_state['sol_fuels'].equals(st.session_state['fuels'])
     flag6 = st.session_state['sol_vehicles'].equals(st.session_state['vehicles'])
     flag7 = st.session_state['sol_sell_percent'] == st.session_state['sell_percent']
-    if not flag1 or not flag2 or not flag4 or not flag5 or not flag6 or not flag7:
+    flag8 = st.session_state['sol_alpha'] == st.session_state['alpha']
+    flag9 = st.session_state['sol_beta'] == st.session_state['beta']
+    if not flag1 or not flag2 or not flag4 or not flag5 or not flag6 or not flag7 or not flag8 or not flag9:
       plakeholder2 = kol2.empty()
-      plakeholder2.subheader('Your (emissions, vehicle, fuel, vehicle fuel, or annual vehicle sell precentage) data changed')
+      plakeholder2.subheader('Your (demand, emissions, vehicle, fuel, vehicle fuel, annual vehicle sell precentage, alpha, or beta) data changed')
       plakeholder = kol2.empty()
       if plakeholder.button("Re-Optimize Fleet!", type='primary', use_container_width =True, key='p6'):
         plakeholder2.empty()
         plakeholder.empty()
-        main_fun()
+        del st.session_state['submission']
+        st.rerun()
 
     kol2.header('Here are your solutions costs and analytics!')
     sub = st.session_state['submission']
