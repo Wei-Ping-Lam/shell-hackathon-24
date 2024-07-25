@@ -752,10 +752,8 @@ def main_fun(loops, quicks, alphaa, betaa):
                 group[candid][highest] -= sell_num
                 break
             break
-
-
-      if quick:
-        return demand, fleet, group, groups
+        if quick:
+          my_bar.progress((y+1)/33, text=progress_text)
 
 
       categories = ["S1 D1", "S1 D2", "S1 D3", "S1 D4", "S2 D1", "S2 D2", "S2 D3", "S2 D4", "S4 D1", "S4 D2", "S4 D3", "S4 D4", "S3 D1", "S3 D2", "S3 D3", "S3 D4"]
@@ -842,7 +840,7 @@ def main_fun(loops, quicks, alphaa, betaa):
                 fuel_costs += range_*rate*fuel_consumption
               totalcosts.append(fuel_costs+phy_costs)
             idx = totalcosts.index(min(totalcosts))
-            if int(yeard)-2023 >= y_start:
+            if int(yeard)-2023 >= y_start or y_start == 15:
               new_cat.append({pot_veh_ids[idx]: uses})
             else:
               new_cat.append({veh: uses})
@@ -883,6 +881,25 @@ def main_fun(loops, quicks, alphaa, betaa):
                         fs = ['B20', 'HVO']
                         f = fs[multi.index(min(multi))]
                       new_demand[i].add_vehicle(veh, 1, copy.deepcopy(f), uses[ye])
+        if quick:
+          my_bar.progress((c+17)/33, text=progress_text)
+      
+
+
+      if quick:
+        groupsss = []
+        for y in range(0, 16):
+          new_groupss = {"S1 D1": {}, "S1 D2": {}, "S1 D3": {}, "S1 D4": {}, "S2 D1": {}, "S2 D2": {}, "S2 D3": {}, "S2 D4": {}, "S3 D1": {}, "S3 D2": {}, "S3 D3": {}, "S3 D4": {}, "S4 D1": {}, "S4 D2": {}, "S4 D3": {}, "S4 D4": {}}
+          for i in range(y*16, (y+1)*16):
+            siz = new_demand[i].size
+            distancc = new_demand[i].distance
+            grouu = siz + ' ' + distancc
+            for veh, liss in new_demand[i].met_by.items():
+              new_groupss[grouu][veh] = liss[0]
+          groupsss.append(new_groupss)
+        
+        return new_demand, fleet, group, groupsss
+      
       
       new_fleet = {}
       new_group2 = {"S1 D1": {}, "S1 D2": {}, "S1 D3": {}, "S1 D4": {}, "S2 D1": {}, "S2 D2": {}, "S2 D3": {}, "S2 D4": {}, "S3 D1": {}, "S3 D2": {}, "S3 D3": {}, "S3 D4": {}, "S4 D1": {}, "S4 D2": {}, "S4 D3": {}, "S4 D4": {}}
@@ -913,6 +930,7 @@ def main_fun(loops, quicks, alphaa, betaa):
       for y in range(y_start+1, 16):
         for i in range(y*16, (y+1)*16):
           new_demand[i].met_by = {}
+
       
       return new_demand, new_fleet, new_group, new_group2
     
@@ -938,6 +956,7 @@ def main_fun(loops, quicks, alphaa, betaa):
     else:
       demand, fleet, group, groups = copy.deepcopy(weiping(0, demand, fleet, groups, group2, True, alphaa, betaa))
       my_bar.progress(1.0, text=progress_text)
+      
 
     if loops != 0:
       progress_text_2  = "Optimizing Solution and Reducing Costs..."
@@ -1649,7 +1668,7 @@ def main_fun(loops, quicks, alphaa, betaa):
 
 if 'demand' in st.session_state:
   st.session_state['alpha'] = col2.slider("Alpha: parameter affecting the timeliness of selling 2023 vehicles", min_value=0.2, max_value=1.0, value = 0.2, step = 0.01, format='%.2f')
-  st.session_state['beta'] = col2.slider("Beta: parameter describing weight of insurance/maintenance costs on selling scheme", min_value=3, max_value=20, value = 11, step = 1, format='%.1f')
+  st.session_state['beta'] = col2.slider("Beta: parameter describing weight of insurance/maintenance costs on selling algorithm", min_value=3, max_value=20, value = 11, step = 1, format='%.1f')
   l1, l2, l3 = col2.columns([1, 1, 1])
   placeholder2 = l1.empty()
   placeholder9 = l2.empty()
@@ -1657,7 +1676,7 @@ if 'demand' in st.session_state:
   placeholder8 = col2.empty()
   placeholder = col2.empty()
   if not 'submission' in st.session_state:
-    if placeholder2.button("Optimize Fleet! (~2.5 hours)", type='primary', use_container_width =True, key='p1'):
+    if placeholder2.button("Optimize Fleet! (~2-3 hours)", type='primary', use_container_width =True, key='p1'):
       placeholder2.empty()
       placeholder9.empty()
       placeholder7.empty()
@@ -1665,7 +1684,7 @@ if 'demand' in st.session_state:
         st.stop()
         st.rerun()
       main_fun(6, False, st.session_state['alpha'], st.session_state['beta'])
-    if placeholder9.button("Find Quick Solution! (~5 minutes)", type='primary', use_container_width =True, key='p9'):
+    if placeholder9.button("Find Quick Solution! (~5-10 minutes)", type='primary', use_container_width =True, key='p9'):
       placeholder2.empty()
       placeholder9.empty()
       placeholder7.empty()
@@ -1673,7 +1692,7 @@ if 'demand' in st.session_state:
         st.stop()
         st.rerun()
       main_fun(0, False, st.session_state['alpha'], st.session_state['beta'])
-    if placeholder7.button("Find Quicker Solution! (~5 seconds)", type='primary', use_container_width =True, key='u7'):
+    if placeholder7.button("Find Quicker Solution! (~15-30 seconds)", type='primary', use_container_width =True, key='u7'):
       placeholder2.empty()
       placeholder9.empty()
       placeholder7.empty()
