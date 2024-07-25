@@ -1667,8 +1667,21 @@ def main_fun(loops, quicks, alphaa, betaa):
   col2.markdown('Elapsed Time to Solution: %d minutes %.1f seconds' % (minutes, seconds))
 
 if 'demand' in st.session_state:
-  st.session_state['alpha'] = col2.slider("Alpha: parameter affecting the timeliness of selling 2023 vehicles", min_value=0.2, max_value=1.0, value = 0.2, step = 0.01, format='%.2f')
-  st.session_state['beta'] = col2.slider("Beta: parameter describing weight of insurance/maintenance costs on selling algorithm", min_value=3, max_value=20, value = 11, step = 1, format='%.1f')
+  if 'alpha' not in st.session_state:
+    st.session_state['alpha'] = 0.2
+
+  def store_valuea():
+    st.session_state["alpha"] = st.session_state["_alpha"]
+
+  col2.slider("Alpha: parameter affecting the timeliness of selling 2023 vehicles", min_value=0.2, max_value=1.0, value = st.session_state["alpha"], key = '_alpha', on_change=store_valuea, step = 0.01, format='%.2f')
+  
+  if 'beta' not in st.session_state:
+    st.session_state['beta'] = 11
+
+  def store_valueb():
+    st.session_state["beta"] = st.session_state["_beta"]
+
+  col2.slider("Beta: parameter describing weight of insurance/maintenance costs on selling algorithm", min_value=3, max_value=30, value = st.session_state["beta"], key = '_beta', on_change=store_valueb, step = 1, format='%d')
   l1, l2, l3 = col2.columns([1, 1, 1])
   placeholder2 = l1.empty()
   placeholder9 = l2.empty()

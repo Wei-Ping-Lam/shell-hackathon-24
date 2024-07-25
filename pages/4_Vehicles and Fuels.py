@@ -25,7 +25,7 @@ if not st.session_state['vehicles'].equals(vehicles_df):
     st.session_state['vehicles'] = vehicles_df
     st.rerun()
 if not st.session_state['vehicles'].equals(st.session_state['original_vehicles']):
-  if col1.button('Reset to default'):
+  if col1.button('Reset to default', key = 'a4'):
     st.session_state['vehicles'] = st.session_state['original_vehicles']
     del st.session_state['delme']
     st.rerun()
@@ -50,7 +50,7 @@ if not st.session_state['fuels'].equals(fuels_df):
     st.session_state['fuels'] = fuels_df
     st.rerun()
 if not st.session_state['fuels'].equals(st.session_state['original_fuels']):
-  if col2.button('Reset to default'):
+  if col2.button('Reset to default', key = 'a7'):
     st.session_state['fuels'] = st.session_state['original_fuels']
     del st.session_state['delme2']
     st.rerun()
@@ -75,7 +75,7 @@ if not st.session_state['vehicles_fuels'].equals(vehicles_fuels_df):
     st.session_state['vehicles_fuels'] = vehicles_fuels_df
     st.rerun()
 if not st.session_state['vehicles_fuels'].equals(st.session_state['original_vehicles_fuels']):
-  if col3.button('Reset to default'):
+  if col3.button('Reset to default', key = 'a9'):
     st.session_state['vehicles_fuels'] = st.session_state['original_vehicles_fuels']
     del st.session_state['delme3']
     st.rerun()
