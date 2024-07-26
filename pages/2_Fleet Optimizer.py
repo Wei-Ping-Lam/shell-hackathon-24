@@ -886,7 +886,7 @@ def main_fun(loops, quicks, alphaa, betaa):
       
 
 
-      if quick:
+      if quick or y_start == 15:
         groupsss = []
         for y in range(0, 16):
           new_groupss = {"S1 D1": {}, "S1 D2": {}, "S1 D3": {}, "S1 D4": {}, "S2 D1": {}, "S2 D2": {}, "S2 D3": {}, "S2 D4": {}, "S3 D1": {}, "S3 D2": {}, "S3 D3": {}, "S3 D4": {}, "S4 D1": {}, "S4 D2": {}, "S4 D3": {}, "S4 D4": {}}
@@ -948,9 +948,12 @@ def main_fun(loops, quicks, alphaa, betaa):
     if not quicks:
       for x in range(16):##############################################################################################################
         #print(x)
-        demand, fleet, group, group2 = copy.deepcopy(weiping(x, demand, fleet, groups, group2, False, alphaa, betaa))
+        if x != 15:
+          demand, fleet, group, group2 = copy.deepcopy(weiping(x, demand, fleet, groups, group2, False, alphaa, betaa))
+          groups.append(group)
+        else:
+          demand, fleet, group, groups = copy.deepcopy(weiping(x, demand, fleet, groups, group2, False, alphaa, betaa))
         my_bar.progress((x+1)/16, text=progress_text)
-        groups.append(group)
         #for i in range(x*16, (x+1)*16):
           #print(demand[i].met_by)
     else:
@@ -1559,7 +1562,7 @@ def main_fun(loops, quicks, alphaa, betaa):
               continue
             costpkm = BioLNG_consumption*BioLNG_cost - LNG_consumption*LNG_cost
             rateio = (BioLNG_consumption*BioLNG_cost - LNG_consumption*LNG_cost)/(LNG_consumption*LNG_emission - BioLNG_consumption*BioLNG_emission)
-            dollar_per_CO2[rateio + random.random()*0.00000001] = [ids[j], nums[j], 'BioLNG', buckets[j], kms[j], redpv, redpkm, costpkm]
+            dollar_per_CO2[rateio - (i-2020)*0.000000001] = [ids[j], nums[j], 'BioLNG', buckets[j], kms[j], redpv, redpkm, costpkm]
           if ids[j][:3] == 'LNG' and fuels[j] == 'BioLNG':
             LNG_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]]['Fuel'] == 'LNG']['Consumption (unit_fuel/km)'].tolist()[0]
             BioLNG_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]]['Fuel'] == 'BioLNG']['Consumption (unit_fuel/km)'].tolist()[0]
@@ -1574,7 +1577,7 @@ def main_fun(loops, quicks, alphaa, betaa):
               continue
             costpkm = LNG_consumption*LNG_cost - BioLNG_consumption*BioLNG_cost
             rateio = (LNG_consumption*LNG_cost - BioLNG_consumption*BioLNG_cost)/(BioLNG_consumption*BioLNG_emission - LNG_consumption*LNG_emission)
-            dollar_per_CO2[rateio + random.random()*0.00000001] = [ids[j], nums[j], 'BioLNG', buckets[j], kms[j], redpv, redpkm, costpkm]
+            dollar_per_CO2[rateio - (i-2020)*0.000000001] = [ids[j], nums[j], 'BioLNG', buckets[j], kms[j], redpv, redpkm, costpkm]
           if ids[j][:3] == 'Die' and fuels[j] == 'B20':
             B20_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]]['Fuel'] == 'B20']['Consumption (unit_fuel/km)'].tolist()[0]
             HVO_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]]['Fuel'] == 'HVO']['Consumption (unit_fuel/km)'].tolist()[0]
@@ -1589,7 +1592,7 @@ def main_fun(loops, quicks, alphaa, betaa):
               continue
             costpkm = HVO_consumption*HVO_cost - B20_consumption*B20_cost
             rateio = (HVO_consumption*HVO_cost - B20_consumption*B20_cost)/(B20_consumption*B20_emission - HVO_consumption*HVO_emission)
-            dollar_per_CO2[rateio + random.random()*0.00000001] = [ids[j], nums[j], 'HVO', buckets[j], kms[j], redpv, redpkm, costpkm]
+            dollar_per_CO2[rateio - (i-2020)*0.000000001] = [ids[j], nums[j], 'HVO', buckets[j], kms[j], redpv, redpkm, costpkm]
           if ids[j][:3] == 'Die' and fuels[j] == 'HVO':
             B20_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]]['Fuel'] == 'B20']['Consumption (unit_fuel/km)'].tolist()[0]
             HVO_consumption = vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]].loc[vehicles_fuels_df.loc[vehicles_fuels_df['ID'] == ids[j]]['Fuel'] == 'HVO']['Consumption (unit_fuel/km)'].tolist()[0]
@@ -1604,7 +1607,7 @@ def main_fun(loops, quicks, alphaa, betaa):
               continue
             costpkm = B20_consumption*B20_cost - HVO_consumption*HVO_cost
             rateio = (B20_consumption*B20_cost - HVO_consumption*HVO_cost)/(HVO_consumption*HVO_emission - B20_consumption*B20_emission)
-            dollar_per_CO2[rateio + random.random()*0.00000001] = [ids[j], nums[j], 'HVO', buckets[j], kms[j], redpv, redpkm, costpkm]
+            dollar_per_CO2[rateio - (i-2020)*0.000000001] = [ids[j], nums[j], 'HVO', buckets[j], kms[j], redpv, redpkm, costpkm]
         while len(dollar_per_CO2) > 0:
           veh_id = dollar_per_CO2[min(dollar_per_CO2.keys())][0]
           quant = dollar_per_CO2[min(dollar_per_CO2.keys())][1]
@@ -1705,7 +1708,7 @@ if 'demand' in st.session_state:
         st.stop()
         st.rerun()
       main_fun(0, False, st.session_state['alpha'], st.session_state['beta'])
-    if placeholder7.button("Find Quicker Solution! (~15-30 seconds)", type='primary', use_container_width =True, key='u7'):
+    if placeholder7.button("Find Quicker Solution! (~30-45 seconds)", type='primary', use_container_width =True, key='u7'):
       placeholder2.empty()
       placeholder9.empty()
       placeholder7.empty()
