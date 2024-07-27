@@ -1692,7 +1692,7 @@ if 'demand' in st.session_state:
   placeholder8 = col2.empty()
   placeholder = col2.empty()
   if not 'submission' in st.session_state:
-    if placeholder2.button("Optimize Fleet! (~2-3 hours)", type='primary', use_container_width =True, key='p1'):
+    if placeholder2.button("Optimize Fleet! (~4-5 hours)", type='primary', use_container_width =True, key='p1'):
       placeholder2.empty()
       placeholder9.empty()
       placeholder7.empty()
@@ -1708,7 +1708,7 @@ if 'demand' in st.session_state:
         st.stop()
         st.rerun()
       main_fun(0, False, st.session_state['alpha'], st.session_state['beta'])
-    if placeholder7.button("Find Quicker Solution! (~30-45 seconds)", type='primary', use_container_width =True, key='u7'):
+    if placeholder7.button("Find Quicker Solution! (~20-40 seconds)", type='primary', use_container_width =True, key='u7'):
       placeholder2.empty()
       placeholder9.empty()
       placeholder7.empty()
